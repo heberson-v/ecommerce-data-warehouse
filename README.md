@@ -1,112 +1,73 @@
-# Projeto de Data Warehouse - E-commerce
+# E-commerce Data Warehouse · Python, DuckDB, dbt, Streamlit, Power BI
 
-Este é um projeto de Data Warehouse construído do zero, idealizado para compor um portfólio de Engenharia de Dados. O objetivo do projeto é demonstrar a modelagem de um banco de dados analítico (Data Warehouse) utilizando a abordagem de **Star Schema (Esquema Estrela)**, geração de dados fictícios para simular um ambiente real, carga de dados em um banco analítico e consultas SQL para análise de negócio.
+An end-to-end analytics data warehouse built from scratch for a simulated e-commerce business. It covers the full path a data engineer owns: generating and loading raw data, modeling it into a **star schema** with **dbt**, testing data quality automatically, and serving the results to a **Streamlit** dashboard and **Power BI**.
 
-## 🏗 Arquitetura do Projeto
-O pipeline de dados foi desenhado da seguinte maneira:
-1. **Extração e Carga (Extract & Load)**: Scripts em **Python** utilizando `pandas` e `Faker` geram dados brutos transacionais simulando fontes externas e os carregam em um schema `raw` no **DuckDB**.
-2. **Transformação e Qualidade (Transform)**: O **dbt (Data Build Tool)** atua na camada analítica para:
-   - Limpar e modelar os dados brutos no formato de um Star Schema.
-   - Calcular métricas de negócio (como o Valor Total de cada venda).
-   - Executar testes de qualidade automáticos (garantindo que não existam IDs nulos ou duplicados).
-3. **Armazenamento (Data Warehouse)**: O repositório utiliza o **DuckDB**, um banco de dados OLAP embutido e de altíssimo desempenho, como a engine principal.
-4. **Análise de Dados**: Consultas **SQL** prontas para extrair métricas de alto nível.
-5. **Visualização (Apresentação)**: Dashboard interativo desenvolvido 100% em **Python (Streamlit)** e integração preparada para **Microsoft Power BI**.
+**Stack:** Python (pandas, Faker) · DuckDB · dbt · SQL · Streamlit · Power BI · Parquet
 
-## 📊 Modelagem Dimensional (Star Schema)
+## Architecture
 
-O projeto simula uma operação de E-commerce. O modelo de dados foi estruturado em um esquema estrela, onde temos uma tabela central de **Fatos** cercada por tabelas de **Dimensão**.
+```mermaid
+flowchart LR
+    A[Python + Faker<br/>synthetic transactions] -->|load| B[(DuckDB<br/>raw schema)]
+    B --> C[dbt models<br/>star schema + tests]
+    C --> D[(DuckDB<br/>analytics schema)]
+    D --> E[SQL analytics queries]
+    D --> F[Streamlit dashboard]
+    D -->|Parquet export| G[Power BI]
+```
 
-### Tabelas de Dimensão
-As dimensões armazenam o contexto dos eventos.
+1. **Extract & Load:** Python scripts using `pandas` and `Faker` generate realistic transactional data and load it into a `raw` schema in DuckDB.
+2. **Transform & Data Quality:** dbt cleans the raw data, models it into a star schema, computes business metrics (such as total sale value) and runs automated tests so no fact or dimension has null or duplicate IDs.
+3. **Storage:** DuckDB, an embedded, high-performance OLAP engine, serves as the warehouse.
+4. **Analysis:** ready-to-run SQL queries answer high-level business questions.
+5. **Visualization:** an interactive dashboard written entirely in Python (Streamlit), plus a Parquet export ready for Power BI.
 
-* **`dim_cliente`**:
-  - `id_cliente` (PK)
-  - `nome`
-  - `email`
-  - `cidade`
-  - `estado`
+## Dimensional model
 
-* **`dim_produto`**:
-  - `id_produto` (PK)
-  - `nome_produto`
-  - `categoria`
-  - `preco`
+One fact table of sales surrounded by four dimensions. Column names in the code are in Portuguese; English meanings are shown in parentheses.
 
-* **`dim_loja`**:
-  - `id_loja` (PK)
-  - `nome_loja`
-  - `cidade`
-  - `estado`
+| Table | Columns |
+| --- | --- |
+| `fato_vendas` (sales fact) | `id_venda` PK, `id_cliente` FK, `id_produto` FK, `id_loja` FK, `data_venda` FK, `quantidade` (quantity), `valor_unitario` (unit price), `valor_total` (quantity × unit price) |
+| `dim_cliente` (customer) | `id_cliente` PK, `nome`, `email`, `cidade`, `estado` |
+| `dim_produto` (product) | `id_produto` PK, `nome_produto`, `categoria`, `preco` |
+| `dim_loja` (store) | `id_loja` PK, `nome_loja`, `cidade`, `estado` |
+| `dim_tempo` (date) | `data` PK, `dia`, `mes`, `ano`, `trimestre` (quarter), `dia_da_semana` (weekday) |
 
-* **`dim_tempo`**:
-  - `data` (PK)
-  - `dia`
-  - `mes`
-  - `ano`
-  - `trimestre`
-  - `dia_da_semana`
+## How to run
 
-### Tabela Fato
-A tabela fato armazena as transações (os eventos de venda).
+**1. Set up the environment** (a virtual environment keeps the `dbt` command working):
 
-* **`fato_vendas`**:
-  - `id_venda` (PK)
-  - `id_cliente` (FK)
-  - `id_produto` (FK)
-  - `id_loja` (FK)
-  - `data_venda` (FK)
-  - `quantidade`
-  - `valor_unitario`
-  - `valor_total` (quantidade * valor_unitario)
-
-## 🚀 Como Executar o Projeto
-
-Siga as instruções abaixo para recriar o ambiente, gerar os dados e realizar as análises:
-
-### 1. Configuração do Ambiente
-Certifique-se de ter o Python instalado. Clone este repositório.
-É **altamente recomendável** criar um ambiente virtual (para evitar conflitos e garantir que o comando `dbt` seja reconhecido corretamente pelo seu terminal):
-
-**No Windows:**
 ```bash
 python -m venv venv
-.\venv\Scripts\activate
+source venv/bin/activate        # Windows: .\venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-**No Linux/Mac:**
-```bash
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
+**2. Run the whole pipeline** (generates data, builds the warehouse and runs the queries):
 
-### 2. Executar o Pipeline (Orquestração)
-Você pode rodar todo o pipeline de ponta a ponta através do script principal. Ele irá gerar os dados, criar o banco de dados e executar as queries:
 ```bash
 python run_pipeline.py
 ```
 
-### 📈 Visualização: Executar o Dashboard em Streamlit (Python)
-Para visualizar as métricas do Data Warehouse em uma página web interativa, execute o seguinte comando:
+**3. Open the dashboard:**
+
 ```bash
 streamlit run dashboard.py
 ```
-*(Isso abrirá uma nova aba no seu navegador padrão com os gráficos gerados dinamicamente)*
 
-### 📈 Visualização: Integração com Microsoft Power BI
-Para criar Dashboards e visualizações em cima dos dados gerados, você pode integrar este projeto diretamente com o Power BI das seguintes maneiras:
+## Power BI
 
-**Opção 1: Via Parquet (Recomendado e Nativo)**
-1. Abra o Power BI Desktop.
-2. Vá em **Obter Dados** > **Mais...** > **Parquet**.
-3. O Power BI pedirá uma **URL**. Apesar do nome, **você deve colar o caminho completo (local) do arquivo** no seu computador (Ex: `C:\Users\SeuNome\DW-Project\powerbi_data\fato_vendas.parquet`).
-    * *Dica: Ao rodar o pipeline, o script `export_for_powerbi.py` imprimirá no terminal exatamente os caminhos que você precisa copiar e colar.*
-4. Importe cada um dos arquivos gerados (`fato_vendas.parquet`, `dim_cliente.parquet`, etc.). (Nota: O formato Parquet é recomendado pois preserva perfeitamente os tipos de dados e elimina problemas com formatos numéricos locais).
-5. No Power BI, vá na aba **Exibição de Modelo** e conecte os `ID`s da tabela Fato com os `ID`s das tabelas Dimensão formando o Esquema Estrela.
+- **Parquet (recommended):** in Power BI Desktop choose *Get Data → Parquet* and paste the local path of each file in `powerbi_data/` (the pipeline prints the exact paths). Then relate the fact table IDs to each dimension in *Model view* to rebuild the star schema. Parquet keeps data types intact and avoids locale issues with numbers.
+- **DuckDB ODBC (advanced):** install the [DuckDB ODBC driver](https://duckdb.org/docs/api/odbc/overview), create a DSN pointing to `ecommerce.db`, and connect via *Get Data → ODBC*.
 
-**Opção 2: Via DuckDB ODBC (Avançado)**
-1. Instale o driver [DuckDB ODBC](https://duckdb.org/docs/api/odbc/overview).
-2. Configure uma conexão DSN (Data Source Name) no Windows apontando para o arquivo `ecommerce.db` na raiz do projeto.
-3. No Power BI, vá em **Obter Dados** > **ODBC** e selecione a conexão criada.
+## What this project demonstrates
+
+- Dimensional modeling (Kimball-style star schema)
+- ELT with dbt, including automated data-quality tests
+- Working with an OLAP engine (DuckDB) and columnar formats (Parquet)
+- Delivering the same model to both code-based (Streamlit) and BI (Power BI) consumers
+
+---
+
+**Author:** Heberson Vinhote · Junior Data Engineer & Data Analyst · [LinkedIn](https://www.linkedin.com/in/heberson-vinhote-a7b1bb153)
